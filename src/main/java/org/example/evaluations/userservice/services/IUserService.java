@@ -1,5 +1,6 @@
 package org.example.evaluations.userservice.services;
 
+import org.example.evaluations.userservice.exceptions.InvalidTokenException;
 import org.example.evaluations.userservice.exceptions.PasswordMismatchException;
 import org.example.evaluations.userservice.model.Token;
 import org.example.evaluations.userservice.model.User;
@@ -9,5 +10,7 @@ public interface IUserService {
 
     Token login(String email, String password) throws PasswordMismatchException;
 
-    User validateToken(String token);
+    Token loginWithJWT(String email, String password) throws PasswordMismatchException;
+
+    User validateToken(String token) throws InvalidTokenException;
 }

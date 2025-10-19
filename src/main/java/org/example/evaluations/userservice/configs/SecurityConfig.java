@@ -65,27 +65,45 @@ public class SecurityConfig {
      *
      * Without a configured SecurityFilterChain, Spring will either apply default auto-configuration (which may lock endpoints) or won’t reflect your intended security behavior.
      */
+//    @Bean
+//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+//        http
+//                // Disable CSRF for local REST/API testing. Re-enable or use tokens in production.
+//                .csrf(csrf -> csrf.disable())
+//
+//                // Permit signup/login publicly; protect everything else
+//                .authorizeHttpRequests(auth -> auth
+//                        .requestMatchers("/users/signup", "/users/login", "/users/validate/*").permitAll()
+//                        .anyRequest().authenticated()
+//                )
+//
+//                // Disable the default login form (we use REST)
+//                .formLogin(form -> form.disable())
+//
+//                // Optionally enable HTTP Basic for testing protected endpoints
+//                .httpBasic(Customizer.withDefaults());
+//
+//        // If using H2 console:
+//        http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
+//
+//        return http.build();
+//    }
+
+// java
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Disable CSRF for local REST/API testing. Re-enable or use tokens in production.
                 .csrf(csrf -> csrf.disable())
-
-                // Permit signup/login publicly; protect everything else
+                .cors(cors -> cors.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/users/signup", "/users/login", "/h2-console/**").permitAll()
+                        .requestMatchers("/users/signup", "/users/login", "/users/validate/*").permitAll()
                         .anyRequest().authenticated()
                 )
-
-                // Disable the default login form (we use REST)
                 .formLogin(form -> form.disable())
-
-                // Optionally enable HTTP Basic for testing protected endpoints
-                .httpBasic(Customizer.withDefaults());
-
-        // If using H2 console:
-        http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
+                .httpBasic(Customizer.withDefaults())
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()));
 
         return http.build();
     }
+
 }

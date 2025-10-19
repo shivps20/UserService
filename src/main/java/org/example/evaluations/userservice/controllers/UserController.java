@@ -4,6 +4,7 @@ import org.example.evaluations.userservice.dtos.LoginRequestDto;
 import org.example.evaluations.userservice.dtos.SignUpRequestDto;
 import org.example.evaluations.userservice.dtos.TokenDto;
 import org.example.evaluations.userservice.dtos.UserDto;
+import org.example.evaluations.userservice.exceptions.InvalidTokenException;
 import org.example.evaluations.userservice.exceptions.PasswordMismatchException;
 import org.example.evaluations.userservice.model.Token;
 import org.example.evaluations.userservice.model.User;
@@ -66,8 +67,21 @@ public class UserController {
         return ResponseEntity.ok(TokenDto.from(token));
     }
 
+    /**
+     * http://localhost:8080/users/validate/iHCXwDlsleWFfwJawKo6RqAmtQ2ZMnj8uaF4nwLRVpdqQzCWH1EUg4c6gMlWtsVjqtio4DBXYpocm4pa67Hjst02Dsuv4FJyIl9PaQrVcMCi2r7LkLBINE7qSz1vpGgV
+     * Method = Get
+     * Headers: content-type: application/json
+     */
     @GetMapping("/validate/{tokenValue}")
     public UserDto validateToken(@PathVariable("tokenValue") String tokenValue) {
-        return null;
+        try {
+            User user = userService.validateToken(tokenValue);
+
+            return UserDto.from(user);
+
+        } catch(InvalidTokenException ite) {
+            System.out.println("Invalid Token. Login again.");
+            return null;
+        }
     }
 }

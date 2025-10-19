@@ -1,6 +1,7 @@
 package org.example.evaluations.userservice.services;
 
 import org.apache.commons.lang3.RandomStringUtils;
+import org.example.evaluations.userservice.exceptions.InvalidTokenException;
 import org.example.evaluations.userservice.exceptions.PasswordMismatchException;
 import org.example.evaluations.userservice.model.Role;
 import org.example.evaluations.userservice.model.Token;
@@ -114,11 +115,55 @@ public class UserServiceImpl implements IUserService{
     }
 
 
+    @Override
+    public Token loginWithJWT(String email, String password) throws PasswordMismatchException {
+        //1. Check if the user exists or not
+        Optional<User> optionalUser = userRepository.findByEmail(email);
 
+        if(optionalUser.isEmpty())
+        {
+            return null; //redirect to the signup page
+        }
+
+        //2. Validate the Provided Password
+        if(!bCryptPasswordEncoder.matches(password,optionalUser.get().getPassword()))
+        {
+            throw new PasswordMismatchException("Invalid Password. Enter correct password.");
+        }
+
+        //3. Login Successful. Generate login token
+        Token token = new Token();
+        token.setUser(optionalUser.get());
+        //Random string of 128 chracters
+        token.setTokenValue(RandomStringUtils.randomAlphanumeric(128));
+
+        //Set the Expiry date e.g. 30 days from generation date
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DATE, 30);
+        Date expirationDate = calendar.getTime();
+        token.setExpiryDate(expirationDate);
+
+        return tokenRepository.save(token);
+    }
 
 
     @Override
-    public User validateToken(String token) {
-        return null;
+    public User validateToken(String token) throws InvalidTokenException{
+        /**
+         * 1. Check if there are tokens in the database whose expiry is greater than current date
+         * 2. If exists, check if the token is expired or not
+         * 3. If not expired, return the user associated with the token
+         */
+
+        //1+2 => Check Token validity
+        Optional<Token> optionalToken = tokenRepository.findByTokenValueAndExpiryDateAfter(token, new Date());
+        if(optionalToken.isEmpty())
+        {
+            //Token is invalid or expired
+            throw new InvalidTokenException("Token is Invalid. Login again"); //Redirect to login page
+        }
+
+        //3. Token is valid. Return the user associated with the token
+        return optionalToken.get().getUser();
     }
 }
