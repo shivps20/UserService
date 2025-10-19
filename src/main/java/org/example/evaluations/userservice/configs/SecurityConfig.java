@@ -49,7 +49,22 @@ public class SecurityConfig {
 //        return httpSecurity.build();
 //    }
 
-
+    /**
+     * Configure security filter chain as we are using Security dependency and by default all endpoints are made secure.
+     * If the SecurityFilterChain bean is not defined, Spring Security may apply default security settings that could restrict access to your application’s endpoints
+     * i.e. it will not allow unauthenticated access to any endpoint, which may not be the intended behavior for your application.
+     * e.g. APIs like /users/signup and /users/login should be publicly accessible without authentication.
+     *
+     * Spring Security applies a chain of servlet filters to every request; a SecurityFilterChain bean tells Spring how to build and configure that chain for your application.
+     * Since WebSecurityConfigurerAdapter was deprecated, providing a @Bean of type SecurityFilterChain is the recommended way to customize HttpSecurity (authorize rules, CSRF, CORS, login form, basic auth, headers, etc.).
+     * Benefits:
+     * 1. Explicitly registers your HTTP security rules (which endpoints are public vs protected).
+     * 2. Lets you disable/enable features (CSRF, form login, frame options for H2) required for your use case.
+     * 3. Supports multiple filter chains with ordering when you need different rules for different request matchers.
+     * 4. Integrates with other security beans (e.g., PasswordEncoder, AuthenticationProvider, AuthenticationManager).
+     *
+     * Without a configured SecurityFilterChain, Spring will either apply default auto-configuration (which may lock endpoints) or won’t reflect your intended security behavior.
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http

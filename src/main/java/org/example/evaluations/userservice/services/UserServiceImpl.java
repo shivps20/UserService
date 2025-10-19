@@ -1,15 +1,20 @@
 package org.example.evaluations.userservice.services;
 
+import org.apache.commons.lang3.RandomStringUtils;
+import org.example.evaluations.userservice.exceptions.PasswordMismatchException;
 import org.example.evaluations.userservice.model.Role;
 import org.example.evaluations.userservice.model.Token;
 import org.example.evaluations.userservice.model.User;
 
 import org.example.evaluations.userservice.repositories.RoleRepository;
+import org.example.evaluations.userservice.repositories.TokenRepository;
 import org.example.evaluations.userservice.repositories.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Optional;
 
 @Service
@@ -18,6 +23,7 @@ public class UserServiceImpl implements IUserService{
     private UserRepository userRepository;
     private BCryptPasswordEncoder bCryptPasswordEncoder;
     private RoleRepository roleRepository;
+    private TokenRepository tokenRepository;
 
     /**
      * Before the Construction injunction of BCryptPasswordEncoder, ensure that its Bean is already defined,
@@ -31,11 +37,13 @@ public class UserServiceImpl implements IUserService{
 
     public UserServiceImpl(UserRepository  userRepository,
                            BCryptPasswordEncoder  bCryptPasswordEncoder,
-                           RoleRepository roleRepository)
+                           RoleRepository roleRepository,
+                           TokenRepository tokenRepository)
     {
         this.userRepository = userRepository;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
         this.roleRepository = roleRepository;
+        this.tokenRepository = tokenRepository;
     }
 
     @Override
@@ -72,8 +80,10 @@ public class UserServiceImpl implements IUserService{
         return user;
     }
 
+
+
     @Override
-    public Token login(String email, String password) {
+    public Token login(String email, String password) throws PasswordMismatchException {
         //1. Check if the user exists or not
         Optional<User> optionalUser = userRepository.findByEmail(email);
 
@@ -82,13 +92,30 @@ public class UserServiceImpl implements IUserService{
             return null; //redirect to the signup page
         }
 
-        if(bCryptPasswordEncoder.matches(password,optionalUser.get().getPassword()))
+        //2. Validate the Provided Password
+        if(!bCryptPasswordEncoder.matches(password,optionalUser.get().getPassword()))
         {
-//            throw new PasswordMis
+            throw new PasswordMismatchException("Invalid Password. Enter correct password.");
         }
 
-        return null;
+        //3. Login Successful. Generate login token
+        Token token = new Token();
+        token.setUser(optionalUser.get());
+        //Random string of 128 chracters
+        token.setTokenValue(RandomStringUtils.randomAlphanumeric(128));
+
+        //Set the Expiry date e.g. 30 days from generation date
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DATE, 30);
+        Date expirationDate = calendar.getTime();
+        token.setExpiryDate(expirationDate);
+
+        return tokenRepository.save(token);
     }
+
+
+
+
 
     @Override
     public User validateToken(String token) {
