@@ -20,6 +20,7 @@ public class UserController {
 
     //Constructor based injunction instead of Autowire
     public UserController(IUserService userService) {
+
         this.userService = userService;
     }
 
@@ -60,11 +61,21 @@ public class UserController {
      * http://localhost:8080/users/login
      * Headers: content-type: application/json
      */
-    @PostMapping("/login")
-    public ResponseEntity<TokenDto> login(@RequestBody LoginRequestDto requestDto) throws PasswordMismatchException {
-        Token token = userService.login(requestDto.getEmail(), requestDto.getPassword());
+//    This method was using Token object, not a JWT token
+//    @PostMapping("/login")
+//    public ResponseEntity<TokenDto> login(@RequestBody LoginRequestDto requestDto) throws PasswordMismatchException {
+//        Token token = userService.login(requestDto.getEmail(), requestDto.getPassword());
+//
+//        return ResponseEntity.ok(TokenDto.from(token));
+//    }
 
-        return ResponseEntity.ok(TokenDto.from(token));
+    //This method is using JWT token for login
+    @PostMapping("/login")
+    public ResponseEntity<String> login(@RequestBody LoginRequestDto requestDto)
+            throws PasswordMismatchException {
+        String jwtToken = userService.loginWithJWT(requestDto.getEmail(), requestDto.getPassword());
+
+        return ResponseEntity.ok(jwtToken);
     }
 
     /**

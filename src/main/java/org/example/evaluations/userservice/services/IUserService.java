@@ -10,7 +10,7 @@ public interface IUserService {
 
     Token login(String email, String password) throws PasswordMismatchException;
 
-    Token loginWithJWT(String email, String password) throws PasswordMismatchException;
+    String loginWithJWT(String email, String password) throws PasswordMismatchException;
 
     User validateToken(String token) throws InvalidTokenException;
 }

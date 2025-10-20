@@ -10,6 +10,7 @@ import org.example.evaluations.userservice.model.User;
 import org.example.evaluations.userservice.repositories.RoleRepository;
 import org.example.evaluations.userservice.repositories.TokenRepository;
 import org.example.evaluations.userservice.repositories.UserRepository;
+import org.example.evaluations.userservice.util.JwtTokenProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -116,7 +117,7 @@ public class UserServiceImpl implements IUserService{
 
 
     @Override
-    public Token loginWithJWT(String email, String password) throws PasswordMismatchException {
+    public String loginWithJWT(String email, String password) throws PasswordMismatchException {
         //1. Check if the user exists or not
         Optional<User> optionalUser = userRepository.findByEmail(email);
 
@@ -131,19 +132,11 @@ public class UserServiceImpl implements IUserService{
             throw new PasswordMismatchException("Invalid Password. Enter correct password.");
         }
 
-        //3. Login Successful. Generate login token
-        Token token = new Token();
-        token.setUser(optionalUser.get());
-        //Random string of 128 chracters
-        token.setTokenValue(RandomStringUtils.randomAlphanumeric(128));
+        //3. Login Successful. Generate JWT token using JJWT library
+        String token = JwtTokenProvider.generateToken("shiv@example.com", "BUYER");
 
-        //Set the Expiry date e.g. 30 days from generation date
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.DATE, 30);
-        Date expirationDate = calendar.getTime();
-        token.setExpiryDate(expirationDate);
 
-        return tokenRepository.save(token);
+        return token;
     }
 
 
