@@ -1,19 +1,22 @@
 package org.example.evaluations.userservice.util;
 
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
 import java.security.Key;
 import java.util.Date;
 import java.util.Map;
 
 @Component
 public class JwtTokenProvider {
-    private static final long EXPIRATION_TIME = 1000 * 60 * 60; // 1 hour
-    private static final Key SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    private final long EXPIRATION_TIME = 1000 * 60 * 60; // 1 hour
 
+    private SecretKey SECRET_KEY;
+
+    public JwtTokenProvider(SecretKey secretKey) {
+        this.SECRET_KEY = secretKey;
+    }
 
     /**
      * To generate a JWT token, you typically need to include the following 3 things:
@@ -21,11 +24,12 @@ public class JwtTokenProvider {
      *  2. Payload - User Attributes
      *  3. Signature - Algorithm + Secret Key
      */
-    public static String generateToken(String email, String role) {
+    public String generateToken(String email, String role) {
         long now = System.currentTimeMillis();
         Date issuedAt = new Date(now);
         Date expiry = new Date(now + EXPIRATION_TIME);
 
+        //Claims = Payload. It contains the user attributes.
         Map<String, Object> claims = Map.of(
                 "email", email,
                 "role", role

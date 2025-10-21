@@ -13,4 +13,6 @@ public interface IUserService {
     String loginWithJWT(String email, String password) throws PasswordMismatchException;
 
     User validateToken(String token) throws InvalidTokenException;
+
+    User validateJWTToken(String jwtToken) throws InvalidTokenException;
 }
