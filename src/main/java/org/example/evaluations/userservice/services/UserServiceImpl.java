@@ -1,9 +1,11 @@
 package org.example.evaluations.userservice.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.example.evaluations.userservice.dtos.SendEmailDto;
 import org.example.evaluations.userservice.exceptions.InvalidTokenException;
 import org.example.evaluations.userservice.exceptions.PasswordMismatchException;
 import org.example.evaluations.userservice.model.Role;
@@ -14,6 +16,8 @@ import org.example.evaluations.userservice.repositories.RoleRepository;
 import org.example.evaluations.userservice.repositories.TokenRepository;
 import org.example.evaluations.userservice.repositories.UserRepository;
 import org.example.evaluations.userservice.util.JwtTokenProvider;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +38,12 @@ public class UserServiceImpl implements IUserService{
     private TokenRepository tokenRepository;
     private JwtTokenProvider jwtTokenProvider;
     private SecretKey SECRET_KEY;
+    private KafkaTemplate<String, String> kafkaTemplate;
+    private ObjectMapper objectMapper; //For JSON conversion/serialization
+
+    @Value("${app.kafka.topics.email-events.name}")
+    private String emailEventsTopic;
+
 
 
     /**
@@ -51,7 +61,9 @@ public class UserServiceImpl implements IUserService{
                            RoleRepository roleRepository,
                            TokenRepository tokenRepository,
                            JwtTokenProvider jwtTokenProvider,
-                           SecretKey secretKey)
+                           SecretKey secretKey,
+                           KafkaTemplate<String, String> kafkaTemplate,
+                           ObjectMapper objectMapper)
     {
         this.userRepository = userRepository;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
@@ -59,6 +71,8 @@ public class UserServiceImpl implements IUserService{
         this.tokenRepository = tokenRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.SECRET_KEY = secretKey;
+        this.kafkaTemplate = kafkaTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -90,11 +104,42 @@ public class UserServiceImpl implements IUserService{
             throw new RuntimeException("Default BUYER role not found");
         }
 
-        userRepository.save(user); //Save to DB
+        //Push an event to the Event Bus (e.g., Kafka) - User Created Event. To be consumed by Email service to send welcome email to the user
+        pushSignupEventoMessageQueue(email, name);
+
+        //Save to DB
+        userRepository.save(user);
 
         return user;
     }
 
+    /**
+     * Push Signup Event to Message Queue (Kafka)
+     */
+    private void pushSignupEventoMessageQueue(String email, String name) {
+        SendEmailDto sendEmailDto = new SendEmailDto();
+        sendEmailDto.setToEmail(email);
+        sendEmailDto.setSubject("Welcome to E-Commerce App");
+        sendEmailDto.setBody("Hello " + name + ",\n\nThank you for registering with our E-Commerce application!\n\nBest Regards,\nE-Commerce Team");
+
+        //Convert SendEmailDto to JSON string - Serialization
+//        String emailEventJson = String.format("{\"toEmail\":\"%s\",\"subject\":\"%s\",\"body\":\"%s\"}",
+//                sendEmailDto.getToEmail(),
+//                sendEmailDto.getSubject(),
+//                sendEmailDto.getBody()
+//        );
+
+        //Using Jackson ObjectMapper for JSON conversion - another way of serialization
+        String emailEventJson = "";
+        try {
+            emailEventJson = objectMapper.writeValueAsString(sendEmailDto);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        //Publish the event to Kafka topic "email-topic"
+        kafkaTemplate.send(emailEventsTopic, emailEventJson);
+        System.out.println("Sending email event to email events topic: " + emailEventsTopic);
+    }
 
 
     @Override

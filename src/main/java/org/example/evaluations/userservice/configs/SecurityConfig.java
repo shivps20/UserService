@@ -149,23 +149,20 @@ public class SecurityConfig {
 
     @Bean
     @Order
-    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
-            throws Exception {
+    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
                 OAuth2AuthorizationServerConfigurer.authorizationServer();
 
         http
+                // This ensures this chain only applies to the auth server endpoints
                 .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
                 .with(authorizationServerConfigurer, (authorizationServer) ->
-                        authorizationServer
-                                .oidc(Customizer.withDefaults())	// Enable OpenID Connect 1.0
+                        authorizationServer.oidc(Customizer.withDefaults())	// Enable OpenID Connect 1.0
                 )
                 .authorizeHttpRequests((authorize) ->
-                        authorize
-                                .anyRequest().authenticated()
+                        authorize.anyRequest().authenticated()
                 )
-                // Redirect to the login page when not authenticated from the
-                // authorization endpoint
+                // Redirect to the login page when not authenticated from the authorization endpoint
                 .exceptionHandling((exceptions) -> exceptions
                         .defaultAuthenticationEntryPointFor(
                                 new LoginUrlAuthenticationEntryPoint("/login"),
@@ -182,12 +179,19 @@ public class SecurityConfig {
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http)
             throws Exception {
         http
-                .authorizeHttpRequests((authorize) -> authorize
+                // Disable CSRF for API testing (re-enable with tokens later)
+                .csrf(csrf -> csrf.disable())
+
+                // Define public vs protected endpoints
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/users/signup", "/users/login", "/users/validate/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                // Form login handles the redirect to the login page from the
-                // authorization server filter chain
-                .formLogin(Customizer.withDefaults());
+                // Form login handles the redirect to the login page from the authorization server filter chain
+                .formLogin(Customizer.withDefaults())
+
+                // Allow basic auth for testing protected API endpoints
+                .httpBasic(Customizer.withDefaults());
 
         return http.build();
     }
